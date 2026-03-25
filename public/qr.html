@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR App QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .url-display {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            color: #333;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: left;
+            color: #1565c0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #0d47a1;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+        .download-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .download-btn:hover {
+            background: #45a049;
+        }
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            text-align: left;
+            color: #856404;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 AR App - QR Code</h1>
+        <p class="subtitle">Scan this QR code with your phone camera to access the AR experience</p>
+
+        <div id="qrcode"></div>
+
+        <div class="url-display" id="urlDisplay"></div>
+
+        <button class="copy-btn" onclick="copyToClipboard()">📋 Copy URL</button>
+        <button class="download-btn" onclick="downloadQR()">⬇️ Download QR</button>
+
+        <div class="instructions">
+            <h3>📱 How to Use:</h3>
+            <ol>
+                <li><strong>⚠️ IMPORTANT FIRST:</strong> Create a .mind marker file
+                    <ul>
+                        <li>Go to: <a href="https://hiukim.github.io/mind-ar-js/tools/compile" target="_blank">MindAR Compiler</a></li>
+                        <li>Upload the image you want to scan (business card, QR, etc.)</li>
+                        <li>Download the .mind file</li>
+                        <li>Save it as <code>public/targets/card.mind</code></li>
+                        <li>Restart your dev server</li>
+                    </ul>
+                </li>
+                <li>Print or display this QR code</li>
+                <li>Open your phone's camera app</li>
+                <li>Point at this QR code</li>
+                <li>Tap the notification popup to open the URL</li>
+                <li>🎯 App launches directly in AR mode!</li>
+                <li>Point your camera at the marker image you used in step 1</li>
+                <li>Magic! The 3D cube appears! ✨</li>
+            </ol>
+        </div>
+
+        <div class="note">
+            <strong>⏰ Note:</strong> Your ngrok URL is temporary. When you restart ngrok, you'll get a new URL and need to generate a new QR code.
+            <br><br>
+            <strong>💡 Tip:</strong> For permanent setup, deploy to Vercel, Netlify, or your own HTTPS server to get a permanent URL.
+        </div>
+    </div>
+
+    <script>
+        // Get the current ngrok URL from the page (can be passed as parameter)
+        const ngrokUrl = window.location.hostname.includes('ngrok') 
+            ? window.location.origin + '?mode=ar'
+            : 'https://unmercifully-stellar-stacia.ngrok-free.dev?mode=ar';
+
+        // Display the URL (without the mode param for clarity)
+        document.getElementById('urlDisplay').textContent = ngrokUrl;
+
+        // Generate QR code
+        new QRCode(document.getElementById('qrcode'), {
+            text: ngrokUrl,
+            width: 300,
+            height: 300,
+            colorDark: '#000',
+            colorLight: '#fff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        function copyToClipboard() {
+            navigator.clipboard.writeText(ngrokUrl).then(() => {
+                alert('URL copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy. Please try manually.');
+            });
+        }
+
+        function downloadQR() {
+            const canvas = document.querySelector('#qrcode canvas');
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'ar-app-qr-code.png';
+            link.click();
+        }
+    </script>
+</body>
+</html>

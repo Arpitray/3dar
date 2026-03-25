@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate .mind Marker File</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 10px;
+        }
+        h1 {
+            color: #ff9800;
+        }
+        .info {
+            background: #3a3a3a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        button {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #fb8c00;
+        }
+        a {
+            color: #4fc3f7;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .steps {
+            background: #3a3a3a;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 3px solid #4fc3f7;
+            padding-left: 15px;
+        }
+        code {
+            background: #1a1a1a;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Generate AR Marker (.mind file)</h1>
+        
+        <div class="info">
+            <strong>⚠️ Required for AR Mode:</strong>
+            Your app needs a <code>.mind</code> compiled marker file to detect images in AR mode.
+        </div>
+
+        <div class="steps">
+            <h2>📋 Quick Steps:</h2>
+            
+            <div class="step">
+                <strong>Step 1:</strong> Go to MindAR Compiler
+                <br><a href="https://hiukim.github.io/mind-ar-js/tools/compile" target="_blank">
+                    🔗 https://hiukim.github.io/mind-ar-js/tools/compile
+                </a>
+            </div>
+
+            <div class="step">
+                <strong>Step 2:</strong> Upload marker image
+                <br>Upload a clear image (JPG/PNG) you want to use as a marker:
+                <ul>
+                    <li>QR code (easiest to test)</li>
+                    <li>Business card / ID card</li>
+                    <li>Product packaging</li>
+                    <li>Book cover</li>
+                    <li>Any distinct image with features</li>
+                </ul>
+                <strong>Recommendation:</strong> Use a business card or product photo for best results.
+            </div>
+
+            <div class="step">
+                <strong>Step 3:</strong> Download the <code>.mind</code> file
+                <br>The compiler will generate a <code>.mind</code> file automatically.
+            </div>
+
+            <div class="step">
+                <strong>Step 4:</strong> Upload to your server
+                <br>Move the downloaded <code>.mind</code> file to: <code>public/targets/card.mind</code>
+                <br>
+                <br>
+                <strong>Via File Explorer:</strong>
+                <ol>
+                    <li>Find your downloaded <code>.mind</code> file</li>
+                    <li>Copy it</li>
+                    <li>Navigate to your project: <code>public/targets/</code></li>
+                    <li>Paste and rename to: <code>card.mind</code></li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <strong>Step 5:</strong> Restart your dev server
+                <br><code>npm run dev --host</code>
+                <br>Then reload your app and switch to AR mode!
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>🧪 Testing Tip:</strong> Start with a simple QR code or business card. More complex images take longer to train but give better tracking.
+        </div>
+
+        <div class="steps">
+            <h2>🔗 Useful Links:</h2>
+            <ul>
+                <li><a href="https://hiukim.github.io/mind-ar-js/tools/compile" target="_blank">MindAR Compiler Tool</a></li>
+                <li><a href="https://github.com/hiukim/mind-ar-js" target="_blank">MindAR Documentation</a></li>
+                <li><a href="https://hiukim.github.io/mind-ar-js/" target="_blank">MindAR Examples</a></li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <strong>✅ Once Complete:</strong>
+            <ol>
+                <li>Refresh your app: go back to Demo mode first</li>
+                <li>Click "Switch to AR"</li>
+                <li>Grant camera permissions</li>
+                <li>Point camera at your marker image!</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

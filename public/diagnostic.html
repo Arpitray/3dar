@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Diagnostic</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1e1e1e;
+      color: #0f0;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 { color: #0f0; }
+    .status { margin: 10px 0; padding: 10px; background: rgba(0,255,0,0.1); border-left: 3px solid #0f0; }
+    .ok { color: #0f0; }
+    .error { color: #f00; }
+    .warning { color: #ff0; }
+    code { background: #333; padding: 2px 6px; border-radius: 3px; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    button:hover { background: #0d0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Network Diagnostic</h1>
+    
+    <div class="status">
+      <p><strong>Device IP:</strong> <code id="deviceIp">Loading...</code></p>
+      <p><strong>Location:</strong> <code id="location">-</code></p>
+    </div>
+
+    <div class="status">
+      <p><strong>Server Connection:</strong> <span id="serverStatus" class="warning">Testing...</span></p>
+      <p id="latency"></p>
+    </div>
+
+    <div class="status">
+      <p><strong>WebSocket Support:</strong> <span id="wsStatus" class="warning">Checking...</span></p>
+    </div>
+
+    <div class="status">
+      <p><strong>Navigation:</strong></p>
+      <button onclick="window.location.href='/'">Go to App</button>
+      <button onclick="window.location.href='/targets/card.mind'">Check Marker File</button>
+    </div>
+
+    <div class="status">
+      <p><strong>Debug Info:</strong></p>
+      <p>User Agent: <code id="ua"></code></p>
+      <p>Protocol: <code id="protocol"></code></p>
+    </div>
+  </div>
+
+  <script>
+    // Device IP
+    document.getElementById('deviceIp').textContent = window.location.hostname + ':' + window.location.port;
+    document.getElementById('location').textContent = window.location.href;
+
+    // User Agent
+    document.getElementById('ua').textContent = navigator.userAgent.substr(0, 50) + '...';
+    document.getElementById('protocol').textContent = window.location.protocol;
+
+    // Test server connectivity
+    async function testServer() {
+      try {
+        const start = performance.now();
+        const response = await fetch('/diagnostic', { method: 'HEAD', cache: 'no-store' });
+        const latency = performance.now() - start;
+        
+        if (response.ok || response.status === 404) {
+          document.getElementById('serverStatus').textContent = '✅ Connected';
+          document.getElementById('serverStatus').className = 'ok';
+          document.getElementById('latency').textContent = `Latency: ${latency.toFixed(0)}ms`;
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (e) {
+        document.getElementById('serverStatus').textContent = `❌ ${e.message}`;
+        document.getElementById('serverStatus').className = 'error';
+        document.getElementById('latency').textContent = '⚠️ Unable to connect to server. Check firewall & WiFi.';
+      }
+    }
+
+    // WebSocket support
+    if (window.WebSocket) {
+      document.getElementById('wsStatus').textContent = '✅ Supported';
+      document.getElementById('wsStatus').className = 'ok';
+    } else {
+      document.getElementById('wsStatus').textContent = '❌ Not supported';
+      document.getElementById('wsStatus').className = 'error';
+    }
+
+    // Run tests
+    testServer();
+  </script>
+</body>
+</html>
