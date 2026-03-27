@@ -27,5 +27,8 @@
     "globals": "^17.4.0",
     "terser": "^5.46.1",
     "vite": "^8.0.1"
+  },
+  "optionalDependencies": {
+    "canvas": "^3.2.2"
   }
 }
