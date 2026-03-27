@@ -2,10 +2,10 @@ node_modules
 .git
 .env
 .env.local
-public/targets
 tts-server
 *.md
 fix-firewall.bat
 ngrok.exe
 ngrok.zip
 .claude
+
