@@ -47,5 +47,4 @@ export const SOCIAL_MEDIA_CONFIG = [
     description: 'Follow on Instagram'
   }
 ];
-
 export default SOCIAL_MEDIA_CONFIG;

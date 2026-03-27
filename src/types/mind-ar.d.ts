@@ -25,7 +25,6 @@ declare module 'mind-ar/dist/mindar-image-three.prod.js' {
     pause(): void;
   }
 }
-
 declare module 'mind-ar' {
   export * from 'mind-ar/dist/mindar-image-three.prod.js';
 }

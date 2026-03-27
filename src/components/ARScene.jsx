@@ -8,7 +8,8 @@ const ARScene = () => {
   const containerRef = useRef();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [targetFound, setTargetFound] = useState(false);
+  const [trackingSession, setTrackingSession] = useState(0);
   // AR Context: holds references to anchor, renderer, scene, camera for 3D social logos
   const arContextRef = useRef({
     anchor: null,
@@ -31,6 +32,7 @@ const ARScene = () => {
       return;
     }
     initStartedRef.current = true;
+    let isLoading = true;
 
     // Clean up all previous resources
     const cleanup = () => {
@@ -64,11 +66,13 @@ const ARScene = () => {
       try {
         console.log("Starting AR mode initialization...");
         await initARMode();
+        isLoading = false;
         setLoading(false);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
       } catch (err) {
         console.error("Initialization Error:", err);
         setError(err.message || "Failed to initialize. Check console for details.");
+        isLoading = false;
         setLoading(false);
         cleanup();
       }
@@ -76,10 +80,11 @@ const ARScene = () => {
 
     // Set a timeout in case initialization hangs
     timeoutRef.current = setTimeout(() => {
-      if (loading) {
+      if (isLoading) {
         setError(
           "AR initialization timeout. Make sure you have a .mind marker file."
         );
+        isLoading = false;
         setLoading(false);
         cleanup();
       }
@@ -172,6 +177,10 @@ const ARScene = () => {
         uiLoading: "yes",
         uiScanning: "no",
         uiError: "yes",
+        filterMinCF: 0.0001, // Highly sensitive to small movements for maximum sharpness
+        filterBeta: 0.001,    // Reduces lag/jitter that creates motion blur
+        warmupTolerance: 5,
+        missTolerance: 5,
       });
 
       console.log("MindAR instance created");
@@ -180,6 +189,10 @@ const ARScene = () => {
       mindarThreeRef.current = mindarThree;
 
       const { renderer, scene, camera } = mindarThree;
+
+      // Ensure high-quality rendering without blurring
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.antialias = true;
 
       if (!renderer || !scene || !camera) {
         throw new Error("MindAR failed to create renderer/scene/camera");
@@ -201,14 +214,17 @@ const ARScene = () => {
 
       // Create anchor
       const anchor = mindarThree.addAnchor(0);
+      console.log("Anchor created:", anchor);
 
       // Store AR context for social media logos
       arContextRef.current = { anchor, renderer, scene, camera };
+      console.log("AR context stored, should trigger SocialMedia3D render");
 
       // Load GLB model ONCE
       let modelLoaded = false;
       const loader = new GLTFLoader();
       loaderRef.current = loader;
+      console.log("Starting GLB model load from /targets/spider-_man_cosmic_invasion.glb");
       
       loader.load(
         "/targets/spider-_man_cosmic_invasion.glb",
@@ -219,14 +235,20 @@ const ARScene = () => {
             return;
           }
           modelLoaded = true;
+          console.log("GLB model loaded, processing...");
 
           const model = gltf.scene;
-          model.scale.set(0.15, 0.15, 0.15);
-          model.position.set(0, 0, 0);
+          model.scale.set(0.32, 0.32, 0.32); // Slightly increased from 0.20
+          model.position.set(0.12, 0.22, 0); // Adjusted slightly for the larger scale
+          model.rotation.x = Math.PI / 6;   // stand upright
+          model.rotation.y = 0;
+          model.rotation.z = 0;
           anchor.group.add(model);
-          console.log("GLB Model loaded successfully");
+          console.log("GLB Model added to anchor group successfully");
         },
-        undefined,
+        (progress) => {
+          console.log("Model loading progress:", Math.round((progress.loaded / progress.total) * 100) + "%");
+        },
         (error) => {
           console.error("Error loading model in AR:", error);
         }
@@ -234,6 +256,78 @@ const ARScene = () => {
 
       // Animation loop
       const clock = new THREE.Clock();
+      let frameCount = 0;
+      let audioPlayer = null; // Ref for logic control
+
+      const speak = async (text) => {
+        try {
+          if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer = null;
+          }
+          console.log("Sending text to Piper TTS server...");
+          const response = await fetch("http://localhost:5000/speak", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text })
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`TTS server error: ${errText}`);
+          }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          audioPlayer = new Audio(url);
+          
+          audioPlayer.onended = () => {
+            URL.revokeObjectURL(url);
+            audioPlayer = null;
+          };
+          
+          audioPlayer.oncanplaythrough = () => {
+            console.log("Piper TTS audio loaded, playing...");
+            audioPlayer.play().catch(e => console.error("Audio playback error:", e));
+          };
+        } catch (error) {
+          console.error("Piper TTS Error:", error);
+          const synth = window.speechSynthesis;
+          if (!synth.speaking) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = synth.getVoices();
+            const bestVoice = voices.find(v => v.name.includes("Natural") || v.name.includes("Enhanced")) || voices[0];
+            if (bestVoice) utterance.voice = bestVoice;
+            utterance.rate = 0.95; 
+            window.speechSynthesis.speak(utterance);
+          }
+        }
+      };
+
+      // Track target found events to trigger UI state
+      anchor.onTargetFound = () => {
+        console.log("MARKER DETECTED!");
+        setTargetFound(true);
+        setTrackingSession((value) => value + 1);
+
+        const script = `We specialize in immersive AR and VR–based technologies, creating engaging, interactive, and future-ready digital experiences.
+        Our solutions span a wide range of use cases— from event engagement, smart business cards, and personalized wedding experiences, to innovative applications in real estate and enterprise environments.
+        In the learning and education domain, we collaborate with universities, schools, and colleges, enabling hands-on exposure to AI and robotics learning, designed to inspire creativity, innovation, and real-world skills.
+        We also bring unique and thoughtfully curated offerings in corporate gifting and distinctive temple accessories, blending technology, culture, and experience in meaningful ways.
+        Every solution is designed to connect people, enhance engagement, and transform how stories, brands, and knowledge are experienced.
+        For more details or a live product demo, feel free to contact me or drop a message.`;
+
+        speak(script);
+      };
+      
+      anchor.onTargetLost = () => {
+        console.log("MARKER LOST!");
+        setTargetFound(false);
+        if (audioPlayer) {
+          audioPlayer.pause();
+          audioPlayer = null;
+        }
+      };
 
       console.log("Starting MindAR...");
       await Promise.race([
@@ -245,12 +339,16 @@ const ARScene = () => {
           )
         ),
       ]);
-      console.log("MindAR started successfully");
+      console.log("MindAR started successfully - marker detection active");
 
       // Set up animation loop
       const animate = () => {
         try {
-          const delta = clock.getDelta();
+          frameCount++;
+          if (frameCount % 60 === 0) {
+            console.log("Main render loop running, frame:", frameCount);
+          }
+          clock.getDelta();
           renderer.render(scene, camera);
           animationIdRef.current = requestAnimationFrame(animate);
         } catch (err) {
@@ -270,13 +368,18 @@ const ARScene = () => {
   return (
     <div ref={containerRef} style={{ width: "100vw", height: "100vh" }}>
       {/* 3D Social Media Logos (AR Mode - After Marker Tracking) */}
-      {!loading && !error && arContextRef.current.anchor && (
-        <SocialMedia3D
-          anchor={arContextRef.current.anchor}
-          renderer={arContextRef.current.renderer}
-          scene={arContextRef.current.scene}
-          camera={arContextRef.current.camera}
-        />
+      {console.log("Render check - loading:", loading, "error:", error, "anchor:", arContextRef.current.anchor ? "YES" : "NO")}
+      {!loading && !error && arContextRef.current.anchor && targetFound && (
+        <>
+          {console.log("RENDERING SocialMedia3D component!")}
+          <SocialMedia3D
+            key={trackingSession}
+            anchor={arContextRef.current.anchor}
+            renderer={arContextRef.current.renderer}
+            scene={arContextRef.current.scene}
+            camera={arContextRef.current.camera}
+          />
+        </>
       )}
       {loading && (
         <div
@@ -328,7 +431,6 @@ const ARScene = () => {
             borderRadius: "10px",
             textAlign: "center",
             zIndex: 1000,
-            maxWidth: "90vw",
             minWidth: "280px",
             maxWidth: "450px",
             border: "2px solid #ff6b6b",
