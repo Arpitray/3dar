@@ -153,7 +153,7 @@ const SocialMedia3D = ({ anchor, renderer, camera }) => {
       bumpTexture.wrapT = THREE.ClampToEdgeWrapping;
 
       // 4. STUDIO LIGHTING MATERIAL: Soft Vinyl / Fabric Pillow
-      const material = new THREE.MeshPhysicalMaterial({
+      const frontMaterial = new THREE.MeshPhysicalMaterial({
         map: colorTexture,
         bumpMap: bumpTexture,
         bumpScale: 0.003, // Tactile depth for stitches and wrinkles
@@ -167,7 +167,20 @@ const SocialMedia3D = ({ anchor, renderer, camera }) => {
         sheenRoughness: 0.4
       });
 
-      const mesh = new THREE.Mesh(geometry, material);
+      const sideMaterial = new THREE.MeshPhysicalMaterial({
+        color: social.color,       // Use solid brand color for the sides
+        bumpMap: bumpTexture,
+        bumpScale: 0.003,
+        metalness: 0.0,
+        roughness: 0.75,
+        clearcoat: 0.15,
+        clearcoatRoughness: 0.6,
+        sheen: 1.0,
+        sheenColor: new THREE.Color(0xffffff),
+        sheenRoughness: 0.4
+      });
+
+      const mesh = new THREE.Mesh(geometry, [frontMaterial, sideMaterial]);
 
       const hitGeometry = new THREE.BoxGeometry(logoSize * 1.8, logoSize * 1.8, logoSize * 0.6);
       const hitMaterial = new THREE.MeshBasicMaterial({
@@ -295,8 +308,15 @@ const SocialMedia3D = ({ anchor, renderer, camera }) => {
       }
       logosRef.current.forEach(({ mesh, hitMesh }) => {
         mesh.geometry.dispose();
-        mesh.material.dispose();
-        if (mesh.material.map) mesh.material.map.dispose();
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(mat => {
+            mat.dispose();
+            if (mat.map) mat.map.dispose();
+          });
+        } else {
+          mesh.material.dispose();
+          if (mesh.material.map) mesh.material.map.dispose();
+        }
         hitMesh.geometry.dispose();
         hitMesh.material.dispose();
       });
