@@ -81,35 +81,17 @@ const SocialMedia3D = ({ anchor, renderer, camera }) => {
       const geometryScaleRatio = logoSize / 1.3; 
       geometry.scale(geometryScaleRatio, geometryScaleRatio, geometryScaleRatio);
 
-      // 2. HIGH-RES FABRIC COLOR TEXTURE
+      // 2. HIGH-RES CLEAN COLOR TEXTURE
       const canvas = document.createElement('canvas');
-      canvas.width = 1024; // Ultra-high res for cinematic realism
+      canvas.width = 1024;
       canvas.height = 1024;
       const ctx = canvas.getContext('2d');
 
-      // Base brand color (NO hue shifts, true to original)
+      // Base brand color (solid, pure color)
       ctx.fillStyle = social.color;
       ctx.fillRect(0, 0, 1024, 1024);
 
-      // Procedural fine fabric grain (tactile realism)
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
-      for (let i = 0; i < 40000; i++) {
-        ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
-        ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.04)';
-      }
-
-      // Hide grain specifically at the extreme borders so `ClampToEdgeWrapping` 
-      // stretches pure smooth color across the puffy sides rather than grainy stripes
-      ctx.strokeStyle = social.color;
-      ctx.lineWidth = 10;
-      ctx.strokeRect(0, 0, 1024, 1024);
-
-      // Draw Icon with soft, fabric-printed look
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-      ctx.shadowBlur = 10;
-      ctx.shadowOffsetX = 3;
-      ctx.shadowOffsetY = 3;
-      
+      // Clean, crisp icon drawing without shadow clutter
       ctx.fillStyle = 'white';
       ctx.font = 'bold 480px "Inter", "Segoe UI", Arial';
       ctx.textAlign = 'center';
@@ -122,62 +104,22 @@ const SocialMedia3D = ({ anchor, renderer, camera }) => {
       colorTexture.wrapS = THREE.ClampToEdgeWrapping;
       colorTexture.wrapT = THREE.ClampToEdgeWrapping;
 
-      // 3. BUMP MAP FOR WRINKLES (Removed stitching text/borders for a cleaner puffy look)
-      const bumpCanvas = document.createElement('canvas');
-      bumpCanvas.width = 1024;
-      bumpCanvas.height = 1024;
-      const bCtx = bumpCanvas.getContext('2d');
-
-      bCtx.fillStyle = '#808080'; // Neutral flat height
-      bCtx.fillRect(0, 0, 1024, 1024);
-
-      // Soft air-pressure folds (wrinkles extending from corners)
-      bCtx.strokeStyle = '#858585'; // Very subtle raise, closer to background color
-      bCtx.lineWidth = 30;
-      bCtx.lineCap = 'round';
-      bCtx.beginPath();
-      // Organic tension curves - smoothed out
-      bCtx.moveTo(120, 120); bCtx.quadraticCurveTo(250, 250, 300, 250);
-      bCtx.moveTo(904, 120); bCtx.quadraticCurveTo(774, 250, 724, 250);
-      bCtx.moveTo(120, 904); bCtx.quadraticCurveTo(250, 774, 300, 774);
-      bCtx.moveTo(904, 904); bCtx.quadraticCurveTo(774, 774, 724, 774);
-      bCtx.stroke();
-      
-      // Removed secondary highlight lines that were causing "text-like" visual artifacts
-      bCtx.stroke();
-      bCtx.stroke();
-
-      const bumpTexture = new THREE.CanvasTexture(bumpCanvas);
-      bumpTexture.anisotropy = 16;
-      bumpTexture.wrapS = THREE.ClampToEdgeWrapping;
-      bumpTexture.wrapT = THREE.ClampToEdgeWrapping;
-
-      // 4. STUDIO LIGHTING MATERIAL: Soft Vinyl / Fabric Pillow
+      // 3. STUDIO LIGHTING MATERIAL: Soft Clean App Icon Look
       const frontMaterial = new THREE.MeshPhysicalMaterial({
         map: colorTexture,
-        bumpMap: bumpTexture,
-        bumpScale: 0.003, // Tactile depth for stitches and wrinkles
         color: '#ffffff',
-        metalness: 0.0,            // Fabric/Vinyl is not metallic
-        roughness: 0.75,           // Semi-matte soft finish
-        clearcoat: 0.15,           // Soft ambient reflection (vinyl)
-        clearcoatRoughness: 0.6,   // Diffused clearcoat
-        sheen: 1.0,               // Soft edge highlighting (fuzz/studio rim light)
-        sheenColor: new THREE.Color(0xffffff),
-        sheenRoughness: 0.4
+        metalness: 0.1,
+        roughness: 0.4,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.3,
       });
 
       const sideMaterial = new THREE.MeshPhysicalMaterial({
-        color: social.color,       // Use solid brand color for the sides
-        bumpMap: bumpTexture,
-        bumpScale: 0.003,
-        metalness: 0.0,
-        roughness: 0.75,
-        clearcoat: 0.15,
-        clearcoatRoughness: 0.6,
-        sheen: 1.0,
-        sheenColor: new THREE.Color(0xffffff),
-        sheenRoughness: 0.4
+        color: social.color,
+        metalness: 0.1,
+        roughness: 0.4,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.3,
       });
 
       const mesh = new THREE.Mesh(geometry, [frontMaterial, sideMaterial]);
@@ -256,32 +198,40 @@ const SocialMedia3D = ({ anchor, renderer, camera }) => {
       }
 
       const elapsed = Date.now() - animationStateRef.current.startTime;
-      const duration = 1200; // 1200ms smooth pop-in animation
-      const progress = Math.min(elapsed / duration, 1);
+      let allComplete = true;
 
-      // Easing function: smooth ease-in-out cubic (no bounce, very smooth)
-      let easeProgress;
-      if (progress < 0.5) {
-        easeProgress = 4 * progress * progress * progress; // Ease-in
-      } else {
-        easeProgress = 1 - Math.pow(-2 * progress + 2, 3) / 2; // Ease-out
-      }
-
-      // Apply scale and translation animation (smooth and gradual)
+      // Apply scale and translation animation
       logosRef.current.forEach(({ mesh, index }) => {
-        const staggerDelay = (index * 80) / duration; // Smooth stagger effect
-        const adjustedProgress = Math.max(0, Math.min(1, easeProgress - staggerDelay));
+        const itemStartTime = index * 80; // 80ms stagger between each
+        const itemDuration = 800; // each item takes 800ms to pop in
+        
+        let itemProgress = 0;
+        if (elapsed > itemStartTime) {
+          itemProgress = Math.min((elapsed - itemStartTime) / itemDuration, 1);
+        }
+
+        if (itemProgress < 1) {
+          allComplete = false;
+        }
+
+        // Easing function: smooth ease-in-out cubic
+        let easeProgress;
+        if (itemProgress < 0.5) {
+          easeProgress = 4 * itemProgress * itemProgress * itemProgress; // Ease-in
+        } else {
+          easeProgress = 1 - Math.pow(-2 * itemProgress + 2, 3) / 2; // Ease-out
+        }
 
         // Scale component
-        const scale = adjustedProgress * mesh.userData.originalScale;
+        const scale = easeProgress * mesh.userData.originalScale;
         mesh.scale.set(scale, scale, scale);
 
         // Slide up component (Y translation)
-        const currentY = mesh.userData.startY + (mesh.userData.targetY - mesh.userData.startY) * adjustedProgress;
+        const currentY = mesh.userData.startY + (mesh.userData.targetY - mesh.userData.startY) * easeProgress;
         mesh.position.y = currentY;
       });
 
-      if (progress < 1) {
+      if (!allComplete) {
         animationStateRef.current.frameId = requestAnimationFrame(animatePopIn);
       } else {
         console.log("Animation complete!");
