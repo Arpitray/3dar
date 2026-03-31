@@ -18,7 +18,6 @@ Instead of a traditional business card, users can:
 - 📷 Marker-based WebAR (no app required)
 - 🪪 Digital business card overlay
 - 🤖 AI avatar with animation
-- 🗣️ Voice narration using TTS
 - 🔘 Clickable CTA buttons:
   - WhatsApp / Call
   - Facebook

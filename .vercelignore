@@ -2,7 +2,6 @@ node_modules
 .git
 .env
 .env.local
-tts-server
 *.md
 fix-firewall.bat
 ngrok.exe

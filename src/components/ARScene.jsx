@@ -224,10 +224,21 @@ const ARScene = () => {
       let modelLoaded = false;
       const loader = new GLTFLoader();
       loaderRef.current = loader;
-      console.log("Starting GLB model load from /targets/spider-_man_cosmic_invasion.glb");
+      console.log("Starting GLB model load from /cameraman_walking.glb");
+      
+      // Animation mixer for walking animation
+      let mixer = null;
+      let walkingModel = null;
+      
+      // Walking path configuration (corner to corner - upper area of card)
+      const startPos = { x: 0.4, y: 0.15, z: -0.4 };    // Start corner (upper)
+      const endPos = { x: -0.4, y: 0.15, z: -0.3 };    // End corner (upper)
+      let walkProgress = 0;
+      let walkDirection = 1; // 1 = forward, -1 = backward
+      const walkSpeed = 0.3; // Speed of walking (units per second)
       
       loader.load(
-        "/targets/spider-_man_cosmic_invasion.glb",
+        "/cameraman_walking.glb",
         (gltf) => {
           // Skip if model already loaded
           if (modelLoaded) {
@@ -238,13 +249,25 @@ const ARScene = () => {
           console.log("GLB model loaded, processing...");
 
           const model = gltf.scene;
-          model.scale.set(0.32, 0.32, 0.32); // Slightly increased from 0.20
-          model.position.set(0.12, 0.22, 0); // Adjusted slightly for the larger scale
-          model.rotation.x = Math.PI / 6;   // stand upright
-          model.rotation.y = 0;
-          model.rotation.z = 0;
+          walkingModel = model;
+          model.scale.set(0.15, 0.15, 0.15); 
+          model.position.set(startPos.x, startPos.y, startPos.z); 
+          
+          // Face the walking direction initially (add PI to flip 180° since model faces backward)
+          model.rotation.y = Math.atan2(endPos.x - startPos.x, endPos.z - startPos.z) + Math.PI;
+          
           anchor.group.add(model);
-          console.log("GLB Model added to anchor group successfully");
+          console.log("Cameraman GLB Model added to anchor group successfully");
+          
+          // Set up animation mixer for walking animation
+          if (gltf.animations && gltf.animations.length > 0) {
+            mixer = new THREE.AnimationMixer(model);
+            const walkAction = mixer.clipAction(gltf.animations[0]);
+            walkAction.play();
+            console.log("Walking animation started, found", gltf.animations.length, "animations");
+          } else {
+            console.log("No animations found in GLB");
+          }
         },
         (progress) => {
           console.log("Model loading progress:", Math.round((progress.loaded / progress.total) * 100) + "%");
@@ -257,76 +280,17 @@ const ARScene = () => {
       // Animation loop
       const clock = new THREE.Clock();
       let frameCount = 0;
-      let audioPlayer = null; // Ref for logic control
-
-      const speak = async (text) => {
-        try {
-          if (audioPlayer) {
-            audioPlayer.pause();
-            audioPlayer = null;
-          }
-          console.log("Sending text to Piper TTS server...");
-          const response = await fetch("http://localhost:5000/speak", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text })
-          });
-
-          if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`TTS server error: ${errText}`);
-          }
-
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          audioPlayer = new Audio(url);
-          
-          audioPlayer.onended = () => {
-            URL.revokeObjectURL(url);
-            audioPlayer = null;
-          };
-          
-          audioPlayer.oncanplaythrough = () => {
-            console.log("Piper TTS audio loaded, playing...");
-            audioPlayer.play().catch(e => console.error("Audio playback error:", e));
-          };
-        } catch (error) {
-          console.error("Piper TTS Error:", error);
-          const synth = window.speechSynthesis;
-          if (!synth.speaking) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            const voices = synth.getVoices();
-            const bestVoice = voices.find(v => v.name.includes("Natural") || v.name.includes("Enhanced")) || voices[0];
-            if (bestVoice) utterance.voice = bestVoice;
-            utterance.rate = 0.95; 
-            window.speechSynthesis.speak(utterance);
-          }
-        }
-      };
 
       // Track target found events to trigger UI state
       anchor.onTargetFound = () => {
         console.log("MARKER DETECTED!");
         setTargetFound(true);
         setTrackingSession((value) => value + 1);
-
-        const script = `We specialize in immersive AR and VR–based technologies, creating engaging, interactive, and future-ready digital experiences.
-        Our solutions span a wide range of use cases— from event engagement, smart business cards, and personalized wedding experiences, to innovative applications in real estate and enterprise environments.
-        In the learning and education domain, we collaborate with universities, schools, and colleges, enabling hands-on exposure to AI and robotics learning, designed to inspire creativity, innovation, and real-world skills.
-        We also bring unique and thoughtfully curated offerings in corporate gifting and distinctive temple accessories, blending technology, culture, and experience in meaningful ways.
-        Every solution is designed to connect people, enhance engagement, and transform how stories, brands, and knowledge are experienced.
-        For more details or a live product demo, feel free to contact me or drop a message.`;
-
-        speak(script);
       };
       
       anchor.onTargetLost = () => {
         console.log("MARKER LOST!");
         setTargetFound(false);
-        if (audioPlayer) {
-          audioPlayer.pause();
-          audioPlayer = null;
-        }
       };
 
       console.log("Starting MindAR...");
@@ -345,10 +309,40 @@ const ARScene = () => {
       const animate = () => {
         try {
           frameCount++;
+          const delta = clock.getDelta();
+          
           if (frameCount % 60 === 0) {
             console.log("Main render loop running, frame:", frameCount);
           }
-          clock.getDelta();
+          
+          // Update animation mixer (for walking animation)
+          if (mixer) {
+            mixer.update(delta);
+          }
+          
+          // Update walking position (back and forth between corners)
+          if (walkingModel) {
+            walkProgress += walkDirection * walkSpeed * delta;
+            
+            // Reverse direction at endpoints
+            if (walkProgress >= 1) {
+              walkProgress = 1;
+              walkDirection = -1;
+              // Turn around to face the start (add PI offset)
+              walkingModel.rotation.y = Math.atan2(startPos.x - endPos.x, startPos.z - endPos.z) + Math.PI;
+            } else if (walkProgress <= 0) {
+              walkProgress = 0;
+              walkDirection = 1;
+              // Turn around to face the end (add PI offset)
+              walkingModel.rotation.y = Math.atan2(endPos.x - startPos.x, endPos.z - startPos.z) + Math.PI;
+            }
+            
+            // Lerp position between start and end
+            walkingModel.position.x = startPos.x + (endPos.x - startPos.x) * walkProgress;
+            walkingModel.position.y = startPos.y; // Keep at upper position
+            walkingModel.position.z = startPos.z + (endPos.z - startPos.z) * walkProgress;
+          }
+          
           renderer.render(scene, camera);
           animationIdRef.current = requestAnimationFrame(animate);
         } catch (err) {
